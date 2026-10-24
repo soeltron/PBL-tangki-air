@@ -2,4 +2,5 @@ backend/vendor/
 backend/node_modules/
 backend/.env
 backend/storage/logs/*.log
-test.jsonhistory.csv
+test.json
+history.csv

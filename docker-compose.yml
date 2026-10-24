@@ -1,0 +1,49 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: tandon
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      
+  phpmyadmin:
+    image: phpmyadmin:5
+    environment:
+      PMA_HOST: mysql
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+  app:
+    build: .
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www
+    depends_on:
+      - mysql
+
+  mqtt-worker:
+    build: .
+    command: php artisan mqtt:listen
+    volumes:
+      - ./backend:/var/www
+    depends_on:
+      - mysql
+      - mosquitto
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use PhpMqtt\Client\MqttClient;
+use PhpMqtt\Client\ConnectionSettings;
 
 class SettingController extends Controller
 {
@@ -41,7 +42,7 @@ class SettingController extends Controller
                 (int) env('MQTT_PORT', 1883),
                 'laravel-config-' . uniqid()
             );
-            $mqtt->connect();
+            $mqtt->connect((new ConnectionSettings)->setUsername(env("MQTT_USERNAME"))->setPassword(env("MQTT_PASSWORD")), true);
             $mqtt->publish('tandon/config', json_encode([
                 'batas_air'   => $s->batas_air,
                 'batas_suhu'  => $s->batas_suhu,

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\SensorData;
 use Illuminate\Console\Command;
 use PhpMqtt\Client\MqttClient;
+use PhpMqtt\Client\ConnectionSettings;
 
 class MqttListen extends Command
 {
@@ -18,7 +19,7 @@ class MqttListen extends Command
             (int) env('MQTT_PORT', 1883),
             'laravel-worker'
         );
-        $mqtt->connect();
+        $mqtt->connect((new ConnectionSettings)->setUsername(env("MQTT_USERNAME"))->setPassword(env("MQTT_PASSWORD")), true);
         $this->info('Terhubung ke MQTT, menunggu data...');
 
         $mqtt->subscribe('tandon/data', function (string $topic, string $message) {

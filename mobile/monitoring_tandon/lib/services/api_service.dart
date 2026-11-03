@@ -106,6 +106,15 @@ class ApiService {
     return _request(() => http.get(uri, headers: _headers));
   }
 
+  static Future<Map<String, dynamic>> getStats({
+    required String device,
+    required String range,
+  }) {
+    final uri = Uri.parse('${AppConfig.apiUrl}/stats')
+        .replace(queryParameters: {'device': device, 'range': range});
+    return _request(() => http.get(uri, headers: _headers));
+  }
+
   static Future<Map<String, dynamic>> getSettings() => _request(
     () =>
         http.get(Uri.parse('${AppConfig.apiUrl}/settings'), headers: _headers),

@@ -6,6 +6,7 @@ import '../services/theme_service.dart';
 import 'dashboard_page.dart';
 import 'control_page.dart';
 import 'history_page.dart';
+import 'statistics_page.dart';
 import 'settings_page.dart';
 import 'admin_users_page.dart';
 
@@ -29,32 +30,46 @@ class _HomeShellState extends State<HomeShell> {
           DashboardPage(),
           ControlPage(),
           HistoryPage(),
+          StatisticsPage(),
           SettingsPage(),
           AdminUsersPage(),
         ]
-      : const [DashboardPage(), HistoryPage(), SettingsPage()];
+      : const [
+          DashboardPage(),
+          HistoryPage(),
+          StatisticsPage(),
+          SettingsPage(),
+        ];
 
   List<String> get _titles => _isAdmin
       ? const [
           'Beranda',
           'Kontrol Pompa',
           'Riwayat Telemetri',
+          'Statistik',
           'Pengaturan Sistem',
           'Kelola User',
         ]
-      : const ['Beranda', 'Riwayat Telemetri', 'Pengaturan Sistem'];
+      : const [
+          'Beranda',
+          'Riwayat Telemetri',
+          'Statistik',
+          'Pengaturan Sistem',
+        ];
 
   List<IconData> get _icons => _isAdmin
       ? const [
           Icons.dashboard_rounded,
           Icons.power_settings_new_rounded,
           Icons.show_chart_rounded,
+          Icons.query_stats_rounded,
           Icons.settings_rounded,
           Icons.manage_accounts_rounded,
         ]
       : const [
           Icons.dashboard_rounded,
           Icons.show_chart_rounded,
+          Icons.query_stats_rounded,
           Icons.settings_rounded,
         ];
 
@@ -63,10 +78,16 @@ class _HomeShellState extends State<HomeShell> {
           'Beranda / Dashboard',
           'Kontrol Pompa Air',
           'Riwayat Telemetri',
+          'Statistik Pengolahan Data',
           'Pengaturan System',
           'Kelola User',
         ]
-      : const ['Beranda / Dashboard', 'Riwayat Telemetri', 'Pengaturan System'];
+      : const [
+          'Beranda / Dashboard',
+          'Riwayat Telemetri',
+          'Statistik Pengolahan Data',
+          'Pengaturan System',
+        ];
 
   @override
   void initState() {

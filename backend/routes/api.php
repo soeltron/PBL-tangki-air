@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\SensorController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StatsController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Models\SensorData;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/history', [SensorController::class, 'history']);
     Route::get('/history/export', [SensorController::class, 'export']);
+    Route::get('/stats', [StatsController::class, 'index']);
 
     Route::get('/settings', [SettingController::class, 'show']);
     Route::put('/settings', [SettingController::class, 'update'])

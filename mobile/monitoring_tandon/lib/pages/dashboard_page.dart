@@ -123,7 +123,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 240),
                       child: const Text(
-                        'Semangat belajar dan pantau semua progres tandon air & suhu kamu di sini.',
+                        'Sistem Monitoring Tandon Air dan Pompa Otomatis berbasis IoT.',
                         style: TextStyle(
                           color: Color(0xFFBAE6FD),
                           fontSize: 12,
@@ -370,7 +370,7 @@ class _DashboardPageState extends State<DashboardPage> {
               childAspectRatio: 1.45,
               children: [
                 _buildCourseStyleCard(
-                  code: 'TKK130801',
+                  code: '',
                   title: 'LEVEL AIR TANDON',
                   value: '${waterLevel.toStringAsFixed(1)} %',
                   icon: Icons.water_drop_outlined,
@@ -380,7 +380,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   textPrimary: textPrimary,
                 ),
                 _buildCourseStyleCard(
-                  code: 'TKK130802',
+                  code: '',
                   title: 'VOLUME AIR',
                   value: '${volume.toStringAsFixed(0)} Liters',
                   icon: Icons.opacity_outlined,
@@ -392,7 +392,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   textPrimary: textPrimary,
                 ),
                 _buildCourseStyleCard(
-                  code: 'TKK130803',
+                  code: '',
                   title: 'SUHU AIR TANDON',
                   value: '${temp.toStringAsFixed(1)} °C',
                   icon: Icons.thermostat_outlined,
@@ -402,7 +402,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   textPrimary: textPrimary,
                 ),
                 _buildCourseStyleCard(
-                  code: 'TKK130804',
+                  code: '',
                   title: 'STATUS POMPA AIR',
                   value: isPumpOn ? 'MENYALA' : 'MATI',
                   icon: Icons.power_settings_new_outlined,
@@ -412,7 +412,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   textPrimary: textPrimary,
                 ),
                 _buildCourseStyleCard(
-                  code: 'TKK130806',
+                  code: '',
                   title: 'MODE KONTROL',
                   value: isAuto ? 'OTOMATIS' : 'MANUAL',
                   icon: Icons.tune_outlined,
@@ -422,7 +422,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   textPrimary: textPrimary,
                 ),
                 _buildCourseStyleCard(
-                  code: 'TKK130807',
+                  code: '',
                   title: 'KAPASITAS MAX',
                   value: '${capacity.toInt()} Liters',
                   icon: Icons.format_list_numbered_outlined,
@@ -434,7 +434,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   textPrimary: textPrimary,
                 ),
                 _buildCourseStyleCard(
-                  code: 'TKK130808',
+                  code: '',
                   title: 'STATUS BROKER',
                   value: mqttService.isRealConnected ? 'ONLINE' : 'SIMULASI',
                   icon: Icons.wifi_outlined,

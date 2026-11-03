@@ -115,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 24),
 
                 Text(
-                  'SIKAD - Monitoring Tandon',
+                  ' Paramore - Water Tank Monitoring',
                   style: TextStyle(
                     color: primary,
                     fontSize: 22,
@@ -281,7 +281,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 )
                               : const Text(
-                                  'Masuk Sistem SIKAD',
+                                  'Masuk Sistem Paramore',
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,

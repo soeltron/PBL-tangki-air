@@ -427,7 +427,7 @@ class _HomeShellState extends State<HomeShell> {
                       ),
                       SizedBox(width: 10),
                       Text(
-                        'Keluar SIKAD / App',
+                        'Logout',
                         style: TextStyle(
                           color: Color(0xFFEF4444),
                           fontSize: 14,

@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\SensorController;
 use App\Http\Controllers\SettingController;
+use App\Http\Middleware\EnsureAdmin;
 use App\Models\SensorData;
 use Illuminate\Support\Facades\Route;
 
@@ -24,5 +26,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/history/export', [SensorController::class, 'export']);
 
     Route::get('/settings', [SettingController::class, 'show']);
-    Route::put('/settings', [SettingController::class, 'update']);
+    Route::put('/settings', [SettingController::class, 'update'])
+        ->middleware(EnsureAdmin::class);
+
+    Route::middleware(EnsureAdmin::class)->prefix('admin')->group(function () {
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::post('/users', [AdminUserController::class, 'store']);
+    });
 });

@@ -10,7 +10,9 @@ class EnsureAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless($request->user()?->role === 'admin', 403, 'Akses khusus admin.');
+        if ($request->user()?->role !== 'admin') {
+            return response()->json(['message' => 'Akses hanya untuk admin.'], 403);
+        }
 
         return $next($request);
     }

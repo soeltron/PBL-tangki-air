@@ -43,7 +43,8 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _isLoading = false;
       if (!success) {
-        _errorMessage = AuthService().error ?? 'Email atau password salah';
+        _errorMessage =
+            AuthService().error ?? 'Username/email atau password salah';
       }
     });
   }
@@ -169,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
                       ],
 
                       Text(
-                        'Email',
+                        'Email atau Username',
                         style: TextStyle(
                           color: label,
                           fontSize: 12,
@@ -189,7 +190,7 @@ class _LoginPageState extends State<LoginPage> {
                           textInputAction: TextInputAction.next,
                           style: TextStyle(color: primary),
                           decoration: InputDecoration(
-                            hintText: 'Masukkan email',
+                            hintText: 'Masukkan email atau username',
                             hintStyle: TextStyle(color: secondary),
                             prefixIcon: Icon(
                               Icons.email_outlined,

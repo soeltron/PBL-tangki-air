@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api_service.dart';
 import 'mqtt_service.dart';
@@ -9,76 +8,73 @@ class AuthService extends ChangeNotifier {
   factory AuthService() => _instance;
   AuthService._internal();
 
-  static const _storage = FlutterSecureStorage();
-
   bool _isLoggedIn = false;
   String _username = '';
+  String _role = 'user';
   String? _error;
 
   bool get isLoggedIn => _isLoggedIn;
+  bool get isAdmin => _role == 'admin';
   String get username => _username;
+  String get role => _role;
   String? get error => _error;
 
-  /// Panggil sekali di main() sebelum runApp: pulihkan sesi dari token.
   Future<void> init() async {
     await ApiService.loadToken();
     if (ApiService.token == null) return;
 
-    var valid = true;
     try {
-      final s = await ApiService.getSettings();
-      valid = s.containsKey('batas_air'); // token ditolak -> tidak ada field ini
-    } catch (_) {
-      valid = true; // server tidak terjangkau, tetap anggap sudah login
+      await ApiService.getSettings();
+    } on ApiException catch (error) {
+      if (error.statusCode == 401) {
+        await ApiService.clearSession();
+        return;
+      }
     }
 
-    if (valid) {
-      _isLoggedIn = true;
-      _username = await _storage.read(key: 'username') ?? 'Pengguna';
-      _startServices();
-    } else {
-      await ApiService.logout();
-    }
+    _isLoggedIn = true;
+    _username = ApiService.username ?? 'Pengguna';
+    _role = ApiService.role ?? 'user';
+    _startServices();
     notifyListeners();
   }
 
-  /// Login ke backend. "user" berisi EMAIL akun (mis. admin@mail.com).
-  Future<bool> login(String user, String pass) async {
+  Future<bool> login(String login, String pass) async {
     _error = null;
     try {
-      final ok = await ApiService.login(user.trim(), pass);
-      if (!ok) {
-        _error = 'Email atau password salah';
-        notifyListeners();
-        return false;
-      }
+      await ApiService.login(login.trim(), pass);
       _isLoggedIn = true;
-      _username = user.trim();
-      await _storage.write(key: 'username', value: _username);
+      _username = ApiService.username ?? login.trim();
+      _role = ApiService.role ?? 'user';
       _startServices();
       notifyListeners();
       return true;
-    } catch (e) {
-      _error = 'Tidak dapat terhubung ke server';
-      notifyListeners();
-      return false;
+    } on ApiException catch (error) {
+      _error = error.message;
+    } on FormatException catch (error) {
+      _error = error.message;
     }
+    notifyListeners();
+    return false;
   }
 
   Future<void> logout() async {
     MqttService().disconnectMqtt();
-    await ApiService.logout();
-    await _storage.delete(key: 'username');
-    _isLoggedIn = false;
-    _username = '';
-    notifyListeners();
+    try {
+      await ApiService.logout();
+    } finally {
+      _isLoggedIn = false;
+      _username = '';
+      _role = 'user';
+      notifyListeners();
+    }
   }
 
   void _startServices() {
-  final mqtt = MqttService();
-  mqtt.loadSettingsFromServer();
-  mqtt.loadLatestFromServer();
-  mqtt.loadHistoryFromServer();
-  mqtt.connectMqtt();
+    final mqtt = MqttService();
+    mqtt.loadSettingsFromServer();
+    mqtt.loadLatestFromServer();
+    mqtt.loadHistoryFromServer();
+    mqtt.connectMqtt();
   }
 }

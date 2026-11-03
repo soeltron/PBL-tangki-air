@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import 'pages/home_shell.dart';
 import 'pages/login_page.dart';
 import 'services/auth_service.dart';
+import 'services/config.dart';
 import 'services/mqtt_service.dart';
 import 'services/theme_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.load();
   await ThemeService().load();
   await MqttService().loadTankSettings();
+  await AuthService().init();
   runApp(const MyApp());
 }
 

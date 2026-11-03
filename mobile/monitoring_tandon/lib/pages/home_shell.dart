@@ -7,6 +7,7 @@ import 'dashboard_page.dart';
 import 'control_page.dart';
 import 'history_page.dart';
 import 'settings_page.dart';
+import 'admin_users_page.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -21,19 +22,51 @@ class _HomeShellState extends State<HomeShell> {
   final mqttService = MqttService();
   final themeService = ThemeService();
 
-  final List<Widget> _pages = const [
-    DashboardPage(),
-    ControlPage(),
-    HistoryPage(),
-    SettingsPage(),
-  ];
+  bool get _isAdmin => authService.isAdmin;
 
-  final List<String> _titles = const [
-    'Beranda',
-    'Kontrol Pompa',
-    'Riwayat Telemetri',
-    'Pengaturan Sistem',
-  ];
+  List<Widget> get _pages => _isAdmin
+      ? const [
+          DashboardPage(),
+          ControlPage(),
+          HistoryPage(),
+          SettingsPage(),
+          AdminUsersPage(),
+        ]
+      : const [DashboardPage(), HistoryPage(), SettingsPage()];
+
+  List<String> get _titles => _isAdmin
+      ? const [
+          'Beranda',
+          'Kontrol Pompa',
+          'Riwayat Telemetri',
+          'Pengaturan Sistem',
+          'Kelola User',
+        ]
+      : const ['Beranda', 'Riwayat Telemetri', 'Pengaturan Sistem'];
+
+  List<IconData> get _icons => _isAdmin
+      ? const [
+          Icons.dashboard_rounded,
+          Icons.power_settings_new_rounded,
+          Icons.show_chart_rounded,
+          Icons.settings_rounded,
+          Icons.manage_accounts_rounded,
+        ]
+      : const [
+          Icons.dashboard_rounded,
+          Icons.show_chart_rounded,
+          Icons.settings_rounded,
+        ];
+
+  List<String> get _labels => _isAdmin
+      ? const [
+          'Beranda / Dashboard',
+          'Kontrol Pompa Air',
+          'Riwayat Telemetri',
+          'Pengaturan System',
+          'Kelola User',
+        ]
+      : const ['Beranda / Dashboard', 'Riwayat Telemetri', 'Pengaturan System'];
 
   @override
   void initState() {
@@ -231,8 +264,8 @@ class _HomeShellState extends State<HomeShell> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          const Text(
-                            'Role: Pengguna',
+                          Text(
+                            'Role: ${authService.isAdmin ? 'Admin' : 'Pengguna'}',
                             style: TextStyle(
                               color: Color(0xFFBAE6FD),
                               fontSize: 11,
@@ -332,29 +365,14 @@ class _HomeShellState extends State<HomeShell> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  _buildSidebarItem(
-                    index: 0,
-                    icon: Icons.dashboard_rounded,
-                    label: 'Beranda / Dashboard',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildSidebarItem(
-                    index: 1,
-                    icon: Icons.power_settings_new_rounded,
-                    label: 'Kontrol Pompa Air',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildSidebarItem(
-                    index: 2,
-                    icon: Icons.show_chart_rounded,
-                    label: 'Riwayat Telemetri',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildSidebarItem(
-                    index: 3,
-                    icon: Icons.settings_rounded,
-                    label: 'Pengaturan System',
-                  ),
+                  for (var index = 0; index < _pages.length; index++) ...[
+                    if (index > 0) const SizedBox(height: 8),
+                    _buildSidebarItem(
+                      index: index,
+                      icon: _icons[index],
+                      label: _labels[index],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -448,14 +466,15 @@ class _HomeShellState extends State<HomeShell> {
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, Icons.home_rounded, 'Beranda'),
-                _buildNavItem(1, Icons.power_settings_new_rounded, 'Kontrol'),
-                _buildNavItem(2, Icons.show_chart_rounded, 'Riwayat'),
-                _buildNavItem(3, Icons.settings_rounded, 'Pengaturan'),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  for (var index = 0; index < _pages.length; index++)
+                    _buildNavItem(index, _icons[index], _titles[index]),
+                ],
+              ),
             ),
           ),
         ),

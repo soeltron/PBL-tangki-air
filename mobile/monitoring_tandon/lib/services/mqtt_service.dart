@@ -280,16 +280,23 @@ class MqttService extends ChangeNotifier {
   Future<void> loadSettingsFromServer() async {
     try {
       final s = await ApiService.getSettings();
-      final air = _num(s['batas_air']);
-      final suhu = _num(s['batas_suhu']);
-      final debit = _num(s['batas_debit']);
-      if (air != null && !_hasLocalMinThreshold) _minThreshold = air;
-      if (suhu != null) _batasSuhu = suhu;
-      if (debit != null) _batasDebit = debit;
-      notifyListeners();
+      applyServerSettings(s);
     } catch (e) {
       debugPrint('Load settings error: $e');
     }
+  }
+
+  void applyServerSettings(Map<String, dynamic> settings) {
+    final air = _num(settings['batas_air']);
+    final suhu = _num(settings['batas_suhu']);
+    final debit = _num(settings['batas_debit']);
+    if (air != null) {
+      _minThreshold = air;
+      _hasLocalMinThreshold = false;
+    }
+    if (suhu != null) _batasSuhu = suhu;
+    if (debit != null) _batasDebit = debit;
+    notifyListeners();
   }
 
   Future<void> loadHistoryFromServer() async {
@@ -394,6 +401,7 @@ class MqttService extends ChangeNotifier {
 
       final connMessage = MqttConnectMessage()
           .withClientIdentifier(clientIdentifier)
+          .authenticateAs(AppConfig.mqttUsername, AppConfig.mqttPassword)
           .startClean()
           .withWillQos(MqttQos.atLeastOnce);
       _client!.connectionMessage = connMessage;

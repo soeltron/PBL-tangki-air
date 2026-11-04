@@ -8,10 +8,15 @@ use Illuminate\Support\Facades\DB;
 
 class WaterFillingTracker
 {
-    public function record(SensorData $sensor, ?bool $pumpOn): void
+    public function record(SensorData $sensor, ?bool $previousPumpOn): void
     {
-        if ($sensor->device === 'd1' && $pumpOn !== null) {
-            $this->recordPumpState($sensor, $pumpOn);
+        if ($sensor->device === 'd1') {
+            $pumpOn = $sensor->pompa === null
+                ? $previousPumpOn
+                : (bool) $sensor->pompa;
+            if ($pumpOn !== null) {
+                $this->recordPumpState($sensor, $pumpOn);
+            }
 
             return;
         }

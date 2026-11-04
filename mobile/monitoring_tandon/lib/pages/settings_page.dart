@@ -30,6 +30,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isSavingLocal = false;
   bool _isSavingHost = false;
   bool _isSavingLimits = false;
+  bool _isSavingAutomaticPump = false;
+  bool _automaticPump = true;
 
   @override
   void initState() {
@@ -78,6 +80,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _waterLimitController.text = '${settings['batas_air'] ?? ''}';
         _temperatureLimitController.text = '${settings['batas_suhu'] ?? ''}';
         _flowLimitController.text = '${settings['batas_debit'] ?? ''}';
+        _automaticPump = settings['automatic_pump'] == true;
       });
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
@@ -126,6 +129,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _saveHost() async {
+    if (!authService.isAdmin) return;
     setState(() => _isSavingHost = true);
     try {
       await AppConfig.setHost(_hostController.text);
@@ -138,6 +142,28 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) _showMessage(error.message);
     } finally {
       if (mounted) setState(() => _isSavingHost = false);
+    }
+  }
+
+  Future<void> _saveAutomaticPump(bool value) async {
+    final previousValue = _automaticPump;
+    setState(() {
+      _automaticPump = value;
+      _isSavingAutomaticPump = true;
+    });
+    try {
+      final response = await ApiService.updateSettings({
+        'automatic_pump': value,
+      });
+      if (!mounted) return;
+      setState(() => _automaticPump = response['automatic_pump'] == true);
+      _showMessage('Mode pompa otomatis berhasil diperbarui.');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _automaticPump = previousValue);
+      _showMessage(error.message);
+    } finally {
+      if (mounted) setState(() => _isSavingAutomaticPump = false);
     }
   }
 
@@ -222,6 +248,7 @@ class _SettingsPageState extends State<SettingsPage> {
               TextField(
                 controller: _hostController,
                 keyboardType: TextInputType.url,
+                readOnly: !authService.isAdmin,
                 decoration: const InputDecoration(
                   labelText: 'Host (tanpa protokol/port)',
                   border: OutlineInputBorder(),
@@ -231,7 +258,9 @@ class _SettingsPageState extends State<SettingsPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isSavingHost ? null : _saveHost,
+                  onPressed: !authService.isAdmin || _isSavingHost
+                      ? null
+                      : _saveHost,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accent,
                     foregroundColor: isDark ? Colors.black : Colors.white,
@@ -335,6 +364,27 @@ class _SettingsPageState extends State<SettingsPage> {
                       ? 'Batas ini disimpan di server dan diterbitkan melalui MQTT.'
                       : 'Batas server (hanya-baca).',
                   style: TextStyle(color: secondary, fontSize: 12),
+                ),
+                const SizedBox(height: 14),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Pompa otomatis',
+                    style: TextStyle(color: primary),
+                  ),
+                  subtitle: Text(
+                    _automaticPump ? 'Aktif' : 'Nonaktif',
+                    style: TextStyle(color: secondary),
+                  ),
+                  value: _automaticPump,
+                  onChanged: _isSavingAutomaticPump ? null : _saveAutomaticPump,
+                  secondary: _isSavingAutomaticPump
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(Icons.autorenew_rounded, color: accent),
                 ),
                 const SizedBox(height: 20),
                 _numberField(

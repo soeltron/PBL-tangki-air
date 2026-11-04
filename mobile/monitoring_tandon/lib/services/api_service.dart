@@ -22,6 +22,7 @@ class ApiService {
   static String? token;
   static String? role;
   static String? username;
+  static int? userId;
 
   static Map<String, String> get _headers => {
     'Accept': 'application/json',
@@ -33,6 +34,7 @@ class ApiService {
     token = await _storage.read(key: 'token');
     role = await _storage.read(key: 'role');
     username = await _storage.read(key: 'username');
+    userId = int.tryParse(await _storage.read(key: 'user_id') ?? '');
   }
 
   static Future<Map<String, dynamic>> login(
@@ -54,12 +56,16 @@ class ApiService {
 
     token = tokenValue;
     role = userValue['role'] is String ? userValue['role'] as String : 'user';
+    userId = userValue['id'] is num ? (userValue['id'] as num).toInt() : null;
     username = userValue['name'] is String
         ? userValue['name'] as String
         : login;
     await _storage.write(key: 'token', value: token);
     await _storage.write(key: 'role', value: role);
     await _storage.write(key: 'username', value: username);
+    if (userId != null) {
+      await _storage.write(key: 'user_id', value: '$userId');
+    }
     return userValue;
   }
 
@@ -80,14 +86,24 @@ class ApiService {
     token = null;
     role = null;
     username = null;
+    userId = null;
     await _storage.delete(key: 'token');
     await _storage.delete(key: 'role');
     await _storage.delete(key: 'username');
+    await _storage.delete(key: 'user_id');
   }
 
   static Future<Map<String, dynamic>> latest() => _request(
     () => http.get(Uri.parse('${AppConfig.apiUrl}/latest'), headers: _headers),
   );
+
+  static Future<Map<String, dynamic>> me() async {
+    final response = await _request(
+      () => http.get(Uri.parse('${AppConfig.apiUrl}/me'), headers: _headers),
+    );
+    userId = response['id'] is num ? (response['id'] as num).toInt() : null;
+    return response;
+  }
 
   static Future<Map<String, dynamic>> history({
     String? device,
@@ -120,14 +136,15 @@ class ApiService {
         http.get(Uri.parse('${AppConfig.apiUrl}/settings'), headers: _headers),
   );
 
-  static Future<Map<String, dynamic>> updateSettings(Map<String, num> data) =>
-      _request(
-        () => http.put(
-          Uri.parse('${AppConfig.apiUrl}/settings'),
-          headers: _headers,
-          body: jsonEncode(data),
-        ),
-      );
+  static Future<Map<String, dynamic>> updateSettings(
+    Map<String, dynamic> data,
+  ) => _request(
+    () => http.put(
+      Uri.parse('${AppConfig.apiUrl}/settings'),
+      headers: _headers,
+      body: jsonEncode(data),
+    ),
+  );
 
   static Future<Map<String, dynamic>> adminUsers() => _request(
     () => http.get(
@@ -152,6 +169,46 @@ class ApiService {
     ),
   );
 
+  static Future<Map<String, dynamic>> updateUser({
+    required int id,
+    required String username,
+    required String email,
+    String? password,
+    required bool userApproved,
+  }) {
+    final body = <String, dynamic>{
+      'username': username,
+      'email': email,
+      'user_approved': userApproved,
+      if (password != null && password.isNotEmpty) 'password': password,
+    };
+    return _request(
+      () => http.put(
+        Uri.parse('${AppConfig.apiUrl}/admin/users/$id'),
+        headers: _headers,
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
+  static Future<void> deleteUser(int id) async {
+    await _request(
+      () => http.delete(
+        Uri.parse('${AppConfig.apiUrl}/admin/users/$id'),
+        headers: _headers,
+      ),
+    );
+  }
+
+  static Future<Map<String, dynamic>> fillingHistory({
+    int page = 1,
+    int perPage = 10,
+  }) {
+    final uri = Uri.parse('${AppConfig.apiUrl}/history/fillings')
+        .replace(queryParameters: {'page': '$page', 'per_page': '$perPage'});
+    return _request(() => http.get(uri, headers: _headers));
+  }
+
   static Future<Map<String, dynamic>> _request(
     Future<http.Response> Function() send,
   ) async {
@@ -164,6 +221,7 @@ class ApiService {
       throw const ApiException('Tidak dapat terhubung ke server.');
     }
 
+    if (response.statusCode == 204) return {};
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
       throw const FormatException('Respons server tidak valid.');

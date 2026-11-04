@@ -34,12 +34,13 @@ class AdminUserController extends Controller
             return response()->json(['message' => 'Email sudah digunakan.'], 422);
         }
 
-        $user = User::create([
-            'name' => $username,
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role' => 'user',
+        $user = new User([
+        'name' => $username,
+        'email' => $data['email'],
+        'password' => Hash::make($data['password']),
         ]);
+        $user->role = 'user';
+        $user->save();
 
         return response()->json($user->only(['id', 'name', 'email', 'role', 'last_login_at']), 201);
     }

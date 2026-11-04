@@ -6,6 +6,7 @@ import '../services/theme_service.dart';
 import 'dashboard_page.dart';
 import 'control_page.dart';
 import 'history_page.dart';
+import 'filling_history_page.dart';
 import 'statistics_page.dart';
 import 'settings_page.dart';
 import 'admin_users_page.dart';
@@ -30,6 +31,7 @@ class _HomeShellState extends State<HomeShell> {
           DashboardPage(),
           ControlPage(),
           HistoryPage(),
+          FillingHistoryPage(),
           StatisticsPage(),
           SettingsPage(),
           AdminUsersPage(),
@@ -37,6 +39,7 @@ class _HomeShellState extends State<HomeShell> {
       : const [
           DashboardPage(),
           HistoryPage(),
+          FillingHistoryPage(),
           StatisticsPage(),
           SettingsPage(),
         ];
@@ -46,6 +49,7 @@ class _HomeShellState extends State<HomeShell> {
           'Beranda',
           'Kontrol Pompa',
           'Riwayat Telemetri',
+          'Riwayat Pengisian',
           'Statistik',
           'Pengaturan Sistem',
           'Kelola User',
@@ -53,6 +57,7 @@ class _HomeShellState extends State<HomeShell> {
       : const [
           'Beranda',
           'Riwayat Telemetri',
+          'Riwayat Pengisian',
           'Statistik',
           'Pengaturan Sistem',
         ];
@@ -62,6 +67,7 @@ class _HomeShellState extends State<HomeShell> {
           Icons.dashboard_rounded,
           Icons.power_settings_new_rounded,
           Icons.show_chart_rounded,
+          Icons.waterfall_chart_rounded,
           Icons.query_stats_rounded,
           Icons.settings_rounded,
           Icons.manage_accounts_rounded,
@@ -69,6 +75,7 @@ class _HomeShellState extends State<HomeShell> {
       : const [
           Icons.dashboard_rounded,
           Icons.show_chart_rounded,
+          Icons.waterfall_chart_rounded,
           Icons.query_stats_rounded,
           Icons.settings_rounded,
         ];
@@ -78,6 +85,7 @@ class _HomeShellState extends State<HomeShell> {
           'Beranda / Dashboard',
           'Kontrol Pompa Air',
           'Riwayat Telemetri',
+          'Riwayat Pengisian Tandon',
           'Statistik Pengolahan Data',
           'Pengaturan System',
           'Kelola User',
@@ -85,6 +93,7 @@ class _HomeShellState extends State<HomeShell> {
       : const [
           'Beranda / Dashboard',
           'Riwayat Telemetri',
+          'Riwayat Pengisian Tandon',
           'Statistik Pengolahan Data',
           'Pengaturan System',
         ];

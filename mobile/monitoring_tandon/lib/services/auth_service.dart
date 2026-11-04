@@ -25,6 +25,7 @@ class AuthService extends ChangeNotifier {
 
     try {
       await ApiService.getSettings();
+      await ApiService.me();
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
         await ApiService.clearSession();

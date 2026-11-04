@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SensorData;
+use App\Models\WaterFilling;
 use Illuminate\Http\Request;
 
 class SensorController extends Controller
@@ -33,5 +34,16 @@ class SensorController extends Controller
             }
             fclose($out);
         }, 'history.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    public function fillings(Request $request)
+    {
+        $validated = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        return WaterFilling::query()
+            ->orderByDesc('started_at')
+            ->paginate($validated['per_page'] ?? 50);
     }
 }

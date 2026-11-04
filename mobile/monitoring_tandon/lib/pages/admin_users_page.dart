@@ -129,6 +129,150 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     }
   }
 
+  Future<void> _editUser(Map<String, dynamic> user) async {
+    final username = TextEditingController(text: '${user['name'] ?? ''}');
+    final email = TextEditingController(text: '${user['email'] ?? ''}');
+    final password = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Ubah pengguna'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: username,
+                  decoration: const InputDecoration(labelText: 'Username'),
+                  validator: (value) => value == null || value.trim().length < 3
+                      ? 'Username minimal 3 karakter.'
+                      : null,
+                ),
+                TextFormField(
+                  controller: email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  validator: (value) => value == null || !value.contains('@')
+                      ? 'Masukkan email yang valid.'
+                      : null,
+                ),
+                TextFormField(
+                  controller: password,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Password baru (opsional)',
+                  ),
+                  validator: (value) =>
+                      value != null && value.isNotEmpty && value.length < 6
+                      ? 'Password minimal 6 karakter.'
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(dialogContext, true);
+              }
+            },
+            child: const Text('Lanjutkan'),
+          ),
+        ],
+      ),
+    );
+
+    try {
+      if (accepted == true && mounted) {
+        final approved = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Konfirmasi perubahan'),
+            content: const Text(
+              'Saya menyetujui perubahan username, email, atau password '
+              'pengguna ini.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Batal'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Setujui dan simpan'),
+              ),
+            ],
+          ),
+        );
+        if (approved == true) {
+          final id = (user['id'] as num).toInt();
+          await ApiService.updateUser(
+            id: id,
+            username: username.text.trim(),
+            email: email.text.trim(),
+            password: password.text,
+            userApproved: true,
+          );
+          if (mounted) _showMessage('Data pengguna berhasil diperbarui.');
+          await _loadUsers();
+        }
+      }
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } finally {
+      username.dispose();
+      email.dispose();
+      password.dispose();
+    }
+  }
+
+  Future<void> _deleteUser(Map<String, dynamic> user) async {
+    final id = (user['id'] as num).toInt();
+    if (id == ApiService.userId) {
+      _showMessage('Admin tidak dapat menghapus akunnya sendiri.');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus pengguna'),
+        content: Text(
+          'Hapus akun ${user['name']}? Tindakan ini tidak dapat dibatalkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ApiService.deleteUser(id);
+      if (mounted) _showMessage('Pengguna berhasil dihapus.');
+      await _loadUsers();
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    }
+  }
+
   String _lastLoginLabel(dynamic timestamp) {
     if (timestamp is! String || timestamp.isEmpty) return 'Belum pernah login';
     final date = DateTime.tryParse(timestamp)?.toLocal();
@@ -185,6 +329,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final user = _users[index];
+                  final id = (user['id'] as num?)?.toInt();
+                  final isCurrentUser = id != null && id == ApiService.userId;
                   return Card(
                     child: ListTile(
                       leading: CircleAvatar(
@@ -200,6 +346,25 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         '${_lastLoginLabel(user['last_login_at'])}',
                       ),
                       isThreeLine: true,
+                      trailing: Wrap(
+                        spacing: 2,
+                        children: [
+                          IconButton(
+                            tooltip: 'Ubah pengguna',
+                            onPressed: () => _editUser(user),
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
+                          IconButton(
+                            tooltip: isCurrentUser
+                                ? 'Tidak dapat menghapus akun sendiri'
+                                : 'Hapus pengguna',
+                            onPressed: isCurrentUser
+                                ? null
+                                : () => _deleteUser(user),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },

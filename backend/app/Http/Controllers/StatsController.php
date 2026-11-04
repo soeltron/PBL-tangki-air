@@ -32,7 +32,11 @@ class StatsController extends Controller
         $summary = [];
 
         foreach ($fields as $field => [$average, $minimum, $maximum]) {
-            $summary[$average] = $stats->whereNotNull($average)->avg($average);
+            $validStats = $stats->whereNotNull($average);
+            $sampleCount = $validStats->sum('samples');
+            $summary[$average] = $sampleCount > 0
+                ? $validStats->sum(fn (SensorHourlyStat $stat) => $stat->{$average} * $stat->samples) / $sampleCount
+                : null;
             $summary[$minimum] = $stats->whereNotNull($minimum)->min($minimum);
             $summary[$maximum] = $stats->whereNotNull($maximum)->max($maximum);
         }

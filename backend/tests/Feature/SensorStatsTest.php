@@ -114,7 +114,7 @@ class SensorStatsTest extends TestCase
             ->assertJsonPath('range', '24h')
             ->assertJsonPath('points.0.avg_level', 20)
             ->assertJsonPath('points.1.avg_level', 40)
-            ->assertJsonPath('summary.avg_level', 30)
+            ->assertJsonPath('summary.avg_level', 32)
             ->assertJsonStructure([
                 'device',
                 'range',
@@ -143,6 +143,57 @@ class SensorStatsTest extends TestCase
                     'max_debit',
                 ],
             ]);
+    }
+
+    public function test_stats_summary_averages_are_weighted_by_valid_sample_counts(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-04 12:00:00'));
+        Sanctum::actingAs(User::factory()->create());
+
+        foreach ([
+            [
+                'avg_level' => 47.5,
+                'avg_suhu' => 21,
+                'avg_debit' => 4.5,
+                'samples' => 2,
+            ],
+            [
+                'avg_level' => 30,
+                'avg_suhu' => 20,
+                'avg_debit' => 3,
+                'samples' => 1,
+            ],
+            [
+                'avg_level' => 55,
+                'avg_suhu' => 30,
+                'avg_debit' => 5,
+                'samples' => 1,
+            ],
+            [
+                'avg_level' => 70,
+                'avg_suhu' => 50,
+                'avg_debit' => 7,
+                'samples' => 1,
+            ],
+            [
+                'avg_level' => null,
+                'avg_suhu' => null,
+                'avg_debit' => null,
+                'samples' => 10,
+            ],
+        ] as $index => $averages) {
+            SensorHourlyStat::create([
+                'device' => 'd1',
+                'hour_start' => now()->startOfHour()->subHours($index),
+                ...$averages,
+            ]);
+        }
+
+        $this->getJson('/api/stats?device=d1&range=24h')
+            ->assertOk()
+            ->assertJsonPath('summary.avg_level', 50)
+            ->assertJsonPath('summary.avg_suhu', 28.4)
+            ->assertJsonPath('summary.avg_debit', 4.8);
     }
 
     private function createReading(array $attributes, string $createdAt): void

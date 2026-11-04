@@ -369,10 +369,11 @@ class _MetricChart extends StatelessWidget {
 
     final lowest = allValues.reduce(math.min);
     final highest = allValues.reduce(math.max);
-    final padding = math.max((highest - lowest) * 0.12, 1.0);
-    final minY = lowest - padding;
-    final maxY = highest + padding;
-    final interval = (maxY - minY) / 4;
+    final isLevel = prefix == 'level';
+    final padding = (highest - lowest) * 0.1;
+    final minY = isLevel ? 0.0 : lowest - (padding > 0 ? padding : 1.0);
+    final maxY = isLevel ? 100.0 : highest + (padding > 0 ? padding : 1.0);
+    final interval = isLevel ? 20.0 : (maxY - minY) / 4;
     final lineBars = <LineChartBarData>[];
     final visibleColors = <Color>[];
 
@@ -383,7 +384,7 @@ class _MetricChart extends StatelessWidget {
         LineChartBarData(
           spots: spots[index],
           color: _series[index].$3,
-          isCurved: true,
+          isCurved: false,
           barWidth: 2,
           dotData: const FlDotData(show: false),
           belowBarData: BarAreaData(show: false),
@@ -437,7 +438,7 @@ class _MetricChart extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 36,
                       interval: _xInterval(),
                       getTitlesWidget: (value, _) {
                         final index = value.toInt();
@@ -450,7 +451,7 @@ class _MetricChart extends StatelessWidget {
                             _formatHour(points[index]['hour']),
                             style: TextStyle(
                               color: secondaryColor,
-                              fontSize: 9,
+                              fontSize: 11,
                             ),
                           ),
                         );
@@ -533,9 +534,13 @@ class _MetricChart extends StatelessWidget {
   }
 
   String _formatHour(dynamic value) {
-    final date = DateTime.parse(value.toString());
+    if (value is! String) return '-';
+    final date = DateTime.tryParse(value)?.toLocal();
+    if (date == null) return '-';
     if (range == '7d') return '${date.day}/${date.month}';
-    return '${date.hour.toString().padLeft(2, '0')}:00';
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 }
 

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
@@ -133,10 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() => _isSavingHost = true);
     try {
       await AppConfig.setHost(_hostController.text);
-      await mqttService.connectMqtt(
-        host: AppConfig.host,
-        port: kIsWeb ? AppConfig.mqttWsPort : AppConfig.mqttTcpPort,
-      );
+      await mqttService.connectMqtt(host: AppConfig.host);
       if (mounted) _showMessage('Host server berhasil disimpan.');
     } on FormatException catch (error) {
       if (mounted) _showMessage(error.message);

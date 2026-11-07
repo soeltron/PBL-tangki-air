@@ -74,7 +74,7 @@ class MqttService extends ChangeNotifier {
 
   // MQTT Connection Settings
   String _brokerHost = AppConfig.host;
-  int _brokerPort = kIsWeb ? AppConfig.mqttWsPort : AppConfig.mqttTcpPort;
+  int _brokerPort = AppConfig.mqttPort(isWeb: kIsWeb);
   String _topicTelemetry = 'tandon/data';
   final String _topicConfig = 'tandon/config';
   String _topicControl = 'tandon/pompa/cmd';
@@ -375,7 +375,12 @@ class MqttService extends ChangeNotifier {
     String? telemetryTopic,
     String? controlTopic,
   }) async {
-    if (host != null) _brokerHost = host;
+    if (host != null) {
+      _brokerHost = host;
+      if (port == null) {
+        _brokerPort = AppConfig.mqttPort(isWeb: kIsWeb, host: host);
+      }
+    }
     if (port != null) _brokerPort = port;
     if (telemetryTopic != null) _topicTelemetry = telemetryTopic;
     if (controlTopic != null) _topicControl = controlTopic;
@@ -393,7 +398,12 @@ class MqttService extends ChangeNotifier {
     final clientIdentifier = 'flutter_tandon_${Random().nextInt(100000)}';
 
     try {
-      _client = createMqttClient(_brokerHost, clientIdentifier, _brokerPort);
+      _client = createMqttClient(
+        _brokerHost,
+        clientIdentifier,
+        _brokerPort,
+        useWebSocket: AppConfig.isDomainHost(_brokerHost),
+      );
       _client!.logging(on: false);
       _client!.keepAlivePeriod = 20;
       _client!.onDisconnected = _onDisconnected;

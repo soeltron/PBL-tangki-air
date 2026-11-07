@@ -1,0 +1,15 @@
+.git
+.git/**
+.env
+.env.*
+backend/.env
+backend/.env.*
+backend/vendor
+backend/node_modules
+backend/tests
+backend/storage
+backend/bootstrap/cache
+mobile
+**/node_modules
+**/vendor
+**/.DS_Store

@@ -1,6 +1,8 @@
 backend/vendor/
 backend/node_modules/
 backend/.env
+.env.docker
+tandon-*.sql.gz
 backend/storage/logs/*.log
 test.json
 history.csv

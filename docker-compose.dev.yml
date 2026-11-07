@@ -1,0 +1,26 @@
+x-backend-source-mounts: &backend-source-mounts
+  - ./backend/app:/var/www/app:ro
+  - ./backend/bootstrap/app.php:/var/www/bootstrap/app.php:ro
+  - ./backend/config:/var/www/config:ro
+  - ./backend/database:/var/www/database:ro
+  - ./backend/resources:/var/www/resources:ro
+  - ./backend/routes:/var/www/routes:ro
+
+services:
+  app:
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+    volumes: *backend-source-mounts
+
+  worker:
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+    volumes: *backend-source-mounts
+
+  scheduler:
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+    volumes: *backend-source-mounts

@@ -41,6 +41,18 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## Web dashboard
+
+Open `/login` and sign in with a username or email and password. The dashboard provides sensor summaries, hourly statistics, telemetry and filling history, and settings. User management is available to admins only; changing a user account requires confirmation.
+
+Create an admin interactively with:
+
+```sh
+php artisan app:make-admin username admin@example.com
+```
+
+The command prompts for and confirms the password; do not pass it as an argument. For HTTPS deployments behind a proxy, configure `APP_URL` and `SESSION_SECURE_COOKIE` in the environment.
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).

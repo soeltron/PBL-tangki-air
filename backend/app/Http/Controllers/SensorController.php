@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SensorData;
 use App\Models\WaterFilling;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class SensorController extends Controller
@@ -28,9 +29,13 @@ class SensorController extends Controller
 
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['waktu', 'device', 'level', 'suhu', 'debit']);
+            fputcsv($out, ['waktu_wib', 'device', 'level', 'suhu', 'debit']);
             foreach ($rows as $row) {
-                fputcsv($out, [$row->created_at, $row->device, $row->level, $row->suhu, $row->debit]);
+                $waktuWib = Carbon::parse(
+                    $row->getRawOriginal('created_at'),
+                    'UTC',
+                )->setTimezone('Asia/Jakarta')->format('Y-m-d H:i:s');
+                fputcsv($out, [$waktuWib, $row->device, $row->level, $row->suhu, $row->debit]);
             }
             fclose($out);
         }, 'history.csv', ['Content-Type' => 'text/csv']);

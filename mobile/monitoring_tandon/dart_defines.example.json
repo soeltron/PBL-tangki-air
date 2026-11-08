@@ -1,0 +1,5 @@
+{
+  "SERVER_HOST": "localhost",
+  "MQTT_USERNAME": "tandon",
+  "MQTT_PASSWORD": ""
+}

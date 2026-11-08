@@ -159,12 +159,16 @@ class _HomeShellState extends State<HomeShell> {
                 size: 20,
               ),
             ),
-            Text(
-              _titles[_selectedIndex],
-              style: TextStyle(
-                color: textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Text(
+                _titles[_selectedIndex],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],

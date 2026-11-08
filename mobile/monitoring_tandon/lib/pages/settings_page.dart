@@ -240,6 +240,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 'Masukkan IP WiFi laptop atau hostname server.',
                 style: TextStyle(color: secondary, fontSize: 12),
               ),
+              if (!AppConfig.hasMqttCredentials) ...[
+                const SizedBox(height: 8),
+                Text(
+                  AppConfig.mqttPassword.trim().isEmpty
+                      ? 'MQTT_PASSWORD kosong. Atur lewat --dart-define atau --dart-define-from-file, lalu build ulang.'
+                      : 'MQTT_USERNAME kosong. Atur lewat --dart-define atau --dart-define-from-file, lalu build ulang.',
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 16),
               TextField(
                 controller: _hostController,

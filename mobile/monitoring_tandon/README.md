@@ -1,17 +1,16 @@
-# monitoring_tandon
+# Monitoring Tandon
 
-A new Flutter project.
+## Konfigurasi
 
-## Getting Started
+Atur alamat server dan kredensial MQTT menggunakan `--dart-define` atau
+`--dart-define-from-file`. Mulai dari template `dart_defines.example.json`,
+salin ke `dart_defines.json`, lalu isi nilai lokal. Jangan commit file lokal
+atau menaruh password dan token di repo.
 
-This project is a starting point for a Flutter application.
+```sh
+flutter run --dart-define-from-file=dart_defines.json
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Kredensial MQTT wajib. `MQTT_PASSWORD` yang kosong akan ditampilkan sebagai
+kesalahan konfigurasi di aplikasi. Username MQTT adalah `tandon`; minta
+password ke tim backend secara pribadi dan jangan menuliskannya di repo.

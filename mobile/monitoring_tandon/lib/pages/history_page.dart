@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/api_service.dart';
 import '../services/mqtt_service.dart';
 import '../services/theme_service.dart';
 
@@ -16,6 +18,7 @@ class _HistoryPageState extends State<HistoryPage> {
   final themeService = ThemeService();
   static const _historyLimitKey = 'historyDisplayLimit';
   int _historyLimit = 20;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -60,6 +63,37 @@ class _HistoryPageState extends State<HistoryPage> {
           SnackBar(content: Text('Gagal menyimpan jumlah riwayat: $error')),
         );
       }
+    }
+  }
+
+  Future<void> _exportHistoryCsv() async {
+    setState(() => _isExporting = true);
+    try {
+      final bytes = await ApiService.exportHistory();
+      await FileSaver.instance.saveFile(
+        name: 'riwayat-telemetri',
+        bytes: bytes,
+        fileExtension: 'csv',
+        mimeType: MimeType.csv,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('CSV riwayat berhasil disimpan.')),
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menyimpan CSV: $error')));
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
     }
   }
 
@@ -112,6 +146,18 @@ class _HistoryPageState extends State<HistoryPage> {
                 },
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _isExporting ? null : _exportHistoryCsv,
+            icon: _isExporting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download_rounded),
+            label: const Text('Ekspor CSV'),
           ),
           const SizedBox(height: 12),
           // Chart Card

@@ -535,7 +535,13 @@ class _MetricChart extends StatelessWidget {
 
   String _formatHour(dynamic value) {
     if (value is! String) return '-';
-    final date = DateTime.tryParse(value)?.toLocal();
+    final isoValue = value.replaceFirst(' ', 'T');
+    final hasTimeZone = RegExp(
+      r'(?:Z|[+-]\d{2}:\d{2})$',
+      caseSensitive: false,
+    ).hasMatch(isoValue);
+    final date = DateTime.tryParse(hasTimeZone ? isoValue : '${isoValue}Z')
+        ?.toLocal();
     if (date == null) return '-';
     if (range == '7d') return '${date.day}/${date.month}';
     final hour = date.hour.toString().padLeft(2, '0');

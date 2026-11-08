@@ -30,9 +30,10 @@ class HistoryRecord {
   });
 
   String get formattedTime {
-    final h = timestamp.hour.toString().padLeft(2, '0');
-    final m = timestamp.minute.toString().padLeft(2, '0');
-    final s = timestamp.second.toString().padLeft(2, '0');
+    final localTimestamp = timestamp.toLocal();
+    final h = localTimestamp.hour.toString().padLeft(2, '0');
+    final m = localTimestamp.minute.toString().padLeft(2, '0');
+    final s = localTimestamp.second.toString().padLeft(2, '0');
     return '$h:$m:$s';
   }
 }
@@ -41,9 +42,7 @@ class MqttService extends ChangeNotifier {
   static final MqttService _instance = MqttService._internal();
   factory MqttService() => _instance;
 
-  MqttService._internal() {
-    _startSimulationTimer();
-  }
+  MqttService._internal();
 
   /// Kontrol pompa dari aplikasi baru aktif setelah firmware device 1
   /// subscribe ke topik kontrol. Ubah ke true kalau sudah siap.
@@ -71,6 +70,7 @@ class MqttService extends ChangeNotifier {
   DateTime? _lastUpdate;
   String? _lastError;
   bool _hasData = false;
+  bool _isConnecting = false;
 
   // MQTT Connection Settings
   String _brokerHost = AppConfig.host;
@@ -79,11 +79,9 @@ class MqttService extends ChangeNotifier {
   final String _topicConfig = 'tandon/config';
   String _topicControl = 'tandon/pompa/cmd';
   bool _isConnected = false;
-  bool _useSimulation = false;
   bool _manualDisconnect = false;
 
   MqttClient? _client;
-  Timer? _simulationTimer;
   Timer? _reconnectTimer;
   final List<HistoryRecord> _historyLogs = [];
   bool _tankSettingsLoaded = false;
@@ -106,9 +104,15 @@ class MqttService extends ChangeNotifier {
   DateTime? get lastUpdate => _lastUpdate;
   String? get lastError => _lastError;
   bool get hasData => _hasData;
-  bool get isConnected => _isConnected || _useSimulation;
-  bool get isRealConnected => _isConnected;
-  bool get useSimulation => _useSimulation;
+  bool get isConnected => _isConnected;
+  bool get isConnecting => _isConnecting;
+  String get connectionStatus => _lastError != null
+      ? 'GAGAL'
+      : _isConnected
+      ? 'TERSAMBUNG'
+      : _isConnecting
+      ? 'MENGHUBUNGKAN'
+      : 'BELUM TERHUBUNG';
   String get brokerHost => _brokerHost;
   int get brokerPort => _brokerPort;
   List<HistoryRecord> get historyLogs => List.unmodifiable(_historyLogs);
@@ -148,53 +152,6 @@ class MqttService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---------------- Simulasi (mode demo, dinyalakan manual) ----------------
-
-  void _startSimulationTimer() {
-    _simulationTimer?.cancel();
-    _simulationTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (_useSimulation) {
-        _simulateStep();
-      }
-    });
-  }
-
-  void _simulateStep() {
-    if (_isPumpOn) {
-      _waterLevel += 1.5;
-      if (_waterLevel >= _maxThreshold || _waterLevel >= 100.0) {
-        if (_waterLevel >= 100.0) _waterLevel = 100.0;
-        if (_isAutoMode) _isPumpOn = false;
-      }
-    } else {
-      final randomUsage = Random().nextDouble() * 0.4;
-      _waterLevel -= randomUsage;
-      if (_waterLevel <= 0.0) {
-        _waterLevel = 0.0;
-      }
-      if (_isAutoMode && _waterLevel <= _minThreshold) {
-        _isPumpOn = true;
-      }
-    }
-
-    _temperature = 27.0 + (Random().nextDouble() * 0.6);
-    _hasData = true;
-    _lastUpdate = DateTime.now();
-    _addHistoryRecord();
-    notifyListeners();
-  }
-
-  void setSimulationMode(bool enable) {
-    _useSimulation = enable;
-    if (enable) {
-      disconnectMqtt(); // hentikan data asli agar tidak tercampur
-      _startSimulationTimer();
-    } else {
-      connectMqtt();
-    }
-    notifyListeners();
-  }
-
   // ---------------- State dan kontrol ----------------
 
   void _addHistoryRecord() {
@@ -222,12 +179,6 @@ class MqttService extends ChangeNotifier {
   }
 
   void setPump(bool value) {
-    if (_useSimulation) {
-      _isPumpOn = value;
-      _addHistoryRecord();
-      notifyListeners();
-      return;
-    }
     if (!pumpControlAvailable) return;
     // Status pompa diperbarui dari data device (field "pompa").
     publishControlCommand(value ? 'ON' : 'OFF');
@@ -261,8 +212,10 @@ class MqttService extends ChangeNotifier {
       if (d1 is Map<String, dynamic>) {
         final level = _num(d1['level']);
         final suhu = _num(d1['suhu']);
+        final pompa = _bool(d1['pompa']);
         if (level != null) _waterLevel = level;
         if (suhu != null) _temperature = suhu;
+        if (pompa != null) _isPumpOn = pompa;
         final t = DateTime.tryParse('${d1['created_at']}');
         if (t != null) _lastUpdate = t.toLocal();
         _hasData = true;
@@ -385,8 +338,26 @@ class MqttService extends ChangeNotifier {
     if (telemetryTopic != null) _topicTelemetry = telemetryTopic;
     if (controlTopic != null) _topicControl = controlTopic;
 
+    if (!AppConfig.hasMqttCredentials) {
+      _isConnected = false;
+      _isConnecting = false;
+      final missing = [
+        if (AppConfig.mqttUsername.trim().isEmpty) 'MQTT_USERNAME',
+        if (AppConfig.mqttPassword.trim().isEmpty) 'MQTT_PASSWORD',
+      ];
+      _lastError =
+          '${missing.join(' dan ')} kosong. Atur lewat --dart-define atau --dart-define-from-file, lalu jalankan ulang aplikasi.';
+      _log('MQTT connection skipped: $_lastError');
+      notifyListeners();
+      return false;
+    }
+
     _manualDisconnect = false;
     _reconnectTimer?.cancel();
+    _isConnecting = true;
+    _lastError = null;
+    _log('Connecting to MQTT broker $_brokerEndpoint');
+    notifyListeners();
 
     // Tutup koneksi lama supaya listener tidak menumpuk.
     final old = _client;
@@ -398,16 +369,19 @@ class MqttService extends ChangeNotifier {
     final clientIdentifier = 'flutter_tandon_${Random().nextInt(100000)}';
 
     try {
-      _client = createMqttClient(
-        _brokerHost,
-        clientIdentifier,
-        _brokerPort,
-        useWebSocket: AppConfig.isDomainHost(_brokerHost),
-      );
+      _client = createMqttClient(_brokerHost, clientIdentifier, _brokerPort);
+      if (kIsWeb) _client!.websocketProtocols = const ['mqtt'];
       _client!.logging(on: false);
       _client!.keepAlivePeriod = 20;
       _client!.onDisconnected = _onDisconnected;
       _client!.onConnected = _onConnected;
+      _client!.onSubscribed = (topic) =>
+          _log('MQTT subscribe accepted: $topic');
+      _client!.onSubscribeFail = (topic) {
+        _lastError = 'Broker menolak subscribe ke topik $topic.';
+        _log(_lastError!);
+        notifyListeners();
+      };
 
       final connMessage = MqttConnectMessage()
           .withClientIdentifier(clientIdentifier)
@@ -419,23 +393,39 @@ class MqttService extends ChangeNotifier {
       await _client!.connect();
       if (_client!.connectionStatus?.state == MqttConnectionState.connected) {
         _isConnected = true;
-        _useSimulation = false;
+        _isConnecting = false;
         _lastError = null;
+        _client!.updates?.listen(_onMqttMessage);
         _client!.subscribe(_topicTelemetry, MqttQos.atMostOnce);
         _client!.subscribe(_topicConfig, MqttQos.atLeastOnce);
-        _client!.updates?.listen(_onMqttMessage);
+        _log(
+          'Connected to $_brokerEndpoint; subscribed to '
+          '$_topicTelemetry and $_topicConfig',
+        );
         notifyListeners();
         return true;
       } else {
         _isConnected = false;
+        _isConnecting = false;
+        final returnCode = _client!.connectionStatus?.returnCode;
+        _lastError =
+            'Broker menolak koneksi ke $_brokerEndpoint'
+            '${returnCode == null ? '.' : ': ${returnCode.name}.'}';
+        _log(_lastError!);
+        _client!.onDisconnected = null;
         _client!.disconnect();
       }
     } catch (e) {
-      debugPrint('MQTT Connection Error: $e');
+      _client?.onDisconnected = null;
+      _client?.disconnect();
       _isConnected = false;
+      _isConnecting = false;
+      final reason = _safeConnectionError(e);
+      _lastError = 'Koneksi ke $_brokerEndpoint gagal: $reason';
+      _log(_lastError!);
     }
 
-    _lastError = 'Tidak dapat terhubung ke broker $_brokerHost:$_brokerPort';
+    _lastError ??= 'Tidak dapat terhubung ke broker $_brokerEndpoint.';
     _scheduleReconnect();
     notifyListeners();
     return false;
@@ -446,11 +436,12 @@ class MqttService extends ChangeNotifier {
     _reconnectTimer?.cancel();
     _client?.disconnect();
     _isConnected = false;
+    _isConnecting = false;
     notifyListeners();
   }
 
   void _scheduleReconnect() {
-    if (_manualDisconnect || _useSimulation) return;
+    if (_manualDisconnect || !AppConfig.hasMqttCredentials) return;
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(const Duration(seconds: 5), () => connectMqtt());
   }
@@ -469,11 +460,18 @@ class MqttService extends ChangeNotifier {
 
   void _onConnected() {
     _isConnected = true;
+    _isConnecting = false;
+    _lastError = null;
     notifyListeners();
   }
 
   void _onDisconnected() {
     _isConnected = false;
+    _isConnecting = false;
+    if (!_manualDisconnect) {
+      _lastError = 'Koneksi ke $_brokerEndpoint terputus.';
+      _log(_lastError!);
+    }
     notifyListeners();
     _scheduleReconnect();
   }
@@ -487,6 +485,9 @@ class MqttService extends ChangeNotifier {
       try {
         final decoded = jsonDecode(payload);
         if (decoded is! Map<String, dynamic>) continue;
+        _log(
+          'MQTT message received: topic=${m.topic}, device=${decoded['device']}',
+        );
         if (m.topic == _topicConfig) {
           _handleConfig(decoded);
         } else if (m.topic == _topicTelemetry) {
@@ -497,6 +498,26 @@ class MqttService extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  String get _brokerEndpoint {
+    if (kIsWeb) {
+      final secure = AppConfig.isDomainHost(_brokerHost);
+      return '${secure ? 'wss' : 'ws'}://$_brokerHost:$_brokerPort/mqtt';
+    }
+    return '$_brokerHost:$_brokerPort';
+  }
+
+  String _safeConnectionError(Object error) {
+    var reason = error.toString();
+    for (final secret in [AppConfig.mqttUsername, AppConfig.mqttPassword]) {
+      if (secret.isNotEmpty) reason = reason.replaceAll(secret, '[redacted]');
+    }
+    return reason.length > 180 ? '${reason.substring(0, 180)}…' : reason;
+  }
+
+  void _log(String message) {
+    if (kDebugMode) debugPrint(message);
   }
 
   void _handleConfig(Map<String, dynamic> d) {
@@ -541,7 +562,6 @@ class MqttService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _simulationTimer?.cancel();
     _reconnectTimer?.cancel();
     _client?.disconnect();
     super.dispose();

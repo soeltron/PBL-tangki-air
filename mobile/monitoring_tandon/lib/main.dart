@@ -11,8 +11,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.load();
   await ThemeService().load();
-  await MqttService().loadTankSettings();
-  await AuthService().init();
+  if (AppConfig.hasServerHost) {
+    await MqttService().loadTankSettings();
+    await AuthService().init();
+  }
   runApp(const MyApp());
 }
 
@@ -86,7 +88,31 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
 
-      home: authService.isLoggedIn ? const HomeShell() : const LoginPage(),
+      home: !AppConfig.hasServerHost
+          ? const _ServerAddressRequiredPage()
+          : authService.isLoggedIn
+          ? const HomeShell()
+          : const LoginPage(),
+    );
+  }
+}
+
+class _ServerAddressRequiredPage extends StatelessWidget {
+  const _ServerAddressRequiredPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Isi alamat server pada SERVER_HOST di dart_defines.json, '
+            'lalu jalankan ulang aplikasi.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 }

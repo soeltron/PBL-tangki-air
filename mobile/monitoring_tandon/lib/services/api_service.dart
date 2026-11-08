@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -210,30 +211,64 @@ class ApiService {
     return _request(() => http.get(uri, headers: _headers));
   }
 
+  static Future<Uint8List> exportHistory() async {
+    final response = await _send(
+      () => http.get(
+        Uri.parse('${AppConfig.apiUrl}/history/export'),
+        headers: _headers,
+      ),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverException(response);
+    }
+
+    return response.bodyBytes;
+  }
+
   static Future<Map<String, dynamic>> _request(
     Future<http.Response> Function() send,
   ) async {
-    late final http.Response response;
+    final response = await _send(send);
+
+    if (response.statusCode == 204) return {};
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw _serverException(response);
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Respons server tidak valid.');
+    }
+    return decoded;
+  }
+
+  static Future<http.Response> _send(
+    Future<http.Response> Function() send,
+  ) async {
     try {
-      response = await send().timeout(_timeout);
+      return await send().timeout(_timeout);
     } on TimeoutException {
       throw const ApiException('Tidak dapat terhubung ke server (timeout).');
     } on http.ClientException {
       throw const ApiException('Tidak dapat terhubung ke server.');
     }
+  }
 
-    if (response.statusCode == 204) return {};
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Respons server tidak valid.');
+  static ApiException _serverException(http.Response response) {
+    Map<String, dynamic>? body;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) body = decoded;
+    } on FormatException {
+      // Non-JSON error pages still report the HTTP status, not a connection error.
     }
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(
-        _errorMessage(decoded, response.statusCode),
-        statusCode: response.statusCode,
-      );
-    }
-    return decoded;
+
+    final message = body == null
+        ? 'Server merespons HTTP ${response.statusCode}.'
+        : _errorMessage(body, response.statusCode);
+    return ApiException(
+      'HTTP ${response.statusCode}: $message',
+      statusCode: response.statusCode,
+    );
   }
 
   static String _errorMessage(Map<String, dynamic> body, int statusCode) {

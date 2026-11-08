@@ -113,6 +113,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     const SizedBox(height: 10),
                     Text(
                       'Selamat Datang, ${username.toUpperCase()}! 👋',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 22,
@@ -320,23 +322,29 @@ class _DashboardPageState extends State<DashboardPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.crop_square_rounded,
-                      color: accentColor,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Daftar Parameter Tandon',
-                      style: TextStyle(
-                        color: textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.crop_square_rounded,
+                        color: accentColor,
+                        size: 18,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Daftar Parameter Tandon',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -436,9 +444,11 @@ class _DashboardPageState extends State<DashboardPage> {
                 _buildCourseStyleCard(
                   code: '',
                   title: 'STATUS BROKER',
-                  value: mqttService.isRealConnected ? 'ONLINE' : 'SIMULASI',
+                  value: mqttService.connectionStatus,
                   icon: Icons.wifi_outlined,
-                  accentColor: mqttService.isRealConnected
+                  accentColor: mqttService.lastError != null
+                      ? Colors.redAccent
+                      : mqttService.isConnected
                       ? Colors.green
                       : Colors.orange,
                   cardBg: cardBg,
@@ -447,6 +457,24 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
             ),
+            if (mqttService.lastError != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.redAccent.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Text(
+                  'MQTT gagal: ${mqttService.lastError}',
+                  style: TextStyle(color: textPrimary, fontSize: 12),
+                ),
+              ),
+            ],
           ] else if (_activeTab == 1) ...[
             Container(
               padding: const EdgeInsets.all(16),
@@ -573,16 +601,21 @@ class _DashboardPageState extends State<DashboardPage> {
                         : const Color(0xFF64748B)),
             ),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? (isDark ? Colors.black : Colors.white)
-                    : (isDark
-                          ? const Color(0xFF94A3B8)
-                          : const Color(0xFF64748B)),
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isSelected
+                      ? (isDark ? Colors.black : Colors.white)
+                      : (isDark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF64748B)),
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
             ),
           ],
@@ -673,12 +706,16 @@ class _DashboardPageState extends State<DashboardPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      value,
-                      style: TextStyle(
-                        color: accentColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const Icon(

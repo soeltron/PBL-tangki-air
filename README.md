@@ -1,6 +1,6 @@
 # Menjalankan sistem
 
-Pilih dan jalankan **satu** topologi saja: VM produksi atau Docker lokal. Jangan jalankan Docker bersamaan dengan VM yang sudah menggunakan port 8000, 1883, atau 9001.
+Pilih dan jalankan **satu** topologi saja: VM produksi atau Docker lokal. Jangan jalankan Docker bersamaan dengan VM yang sudah menggunakan port host 8000 atau 1883.
 
 ## Mode VM
 
@@ -14,7 +14,7 @@ Konfigurasikan alamat host, kredensial, dan rahasia di environment VM masing-mas
 
 ## Mode Docker
 
-Sebelum menjalankan Docker, **matikan VM**, atau setidaknya VM1 dan VM3. Keduanya menggunakan port host yang sama. Docker menyediakan HTTP/API di `http://localhost:8000`, MQTT di `localhost:1883`, dan MQTT WebSocket di `ws://localhost:9001` serta `ws://localhost:8000/mqtt`.
+Sebelum menjalankan Docker, **matikan VM**, atau setidaknya VM1 dan VM3. Keduanya menggunakan port host yang sama. Docker menyediakan HTTP/API di `http://localhost:8000`, MQTT TCP di `localhost:1883`, dan MQTT WebSocket melalui Nginx di `ws://localhost:8000/mqtt`. Listener WebSocket Mosquitto pada port 9001 hanya tersedia di jaringan internal Docker, tidak dipublikasikan ke host.
 
 ### Tiga node logis
 
@@ -38,15 +38,41 @@ Hentikan penulisan dari aplikasi lama dan buat backup database VM sebelum cutove
 
 ### Untuk tim ESP32
 
-Broker Compose mewajibkan autentikasi username/password untuk koneksi MQTT dan WebSocket. Kredensial diberikan ke tim firmware melalui kanal aman di luar repo; jangan menaruhnya di README, source code, issue, atau log.
+Broker Compose mewajibkan username dan password untuk koneksi MQTT maupun WebSocket. Username dan password MQTT wajib; minta kredensialnya lewat chat pribadi, bukan dari repo. Jangan menaruh nilainya di README, source code, issue, atau log.
 
 | Arah | Topik | Format |
 |---|---|---|
 | ESP32 → backend | `tandon/data` | JSON dengan `device` (`d1` atau `d2`) dan `level` numerik 0–100. `suhu`, `debit`, dan `pompa` dapat dikirim sesuai sensor; `pompa` berupa boolean. |
-| Backend → ESP32 | `tandon/config` | JSON retained berisi `batas_air`, `batas_suhu`, `batas_debit`, `capacity_liters`, `pump_on_level`, `pump_off_level`, dan `automatic_pump`. |
+| Backend → ESP32 | `tandon/config` | JSON retained; backend mengirim ulang setiap kali admin menyimpan pengaturan. |
 | Aplikasi → ESP32 | `tandon/pompa/cmd` | Teks `ON` atau `OFF`; kontrol aplikasi tetap nonaktif sampai firmware siap menerima perintah. |
 
-Gunakan port MQTT TCP `1883`; port WebSocket `9001` disediakan untuk klien yang memerlukannya. Pastikan firmware menggunakan username/password yang sama dengan konfigurasi broker, tanpa menaruh nilainya di firmware yang dibagikan atau dokumentasi publik.
+Payload `tandon/config` berisi tujuh kunci berikut sesuai tipe nilai dari `SettingController`:
+
+| Kunci | Tipe JSON |
+|---|---|
+| `capacity_liters` | number |
+| `pump_on_level` | number |
+| `pump_off_level` | number |
+| `automatic_pump` | boolean |
+| `batas_suhu` | number |
+| `batas_debit` | number |
+| `batas_air` | number |
+
+Contoh payload:
+
+```json
+{
+  "capacity_liters": 1500,
+  "pump_on_level": 20,
+  "pump_off_level": 90,
+  "automatic_pump": true,
+  "batas_suhu": 32,
+  "batas_debit": 2.4,
+  "batas_air": 35
+}
+```
+
+Gunakan port MQTT TCP `1883` untuk firmware dan klien native. Flutter web memakai WebSocket melalui `ws://<host>:8000/mqtt` untuk localhost/IP atau `wss://<domain>/mqtt` di produksi. Untuk Flutter, salin `mobile/monitoring_tandon/dart_defines.example.json` menjadi `dart_defines.json`, isi konfigurasi lokal, lalu jalankan `flutter run --dart-define-from-file=dart_defines.json`; atau berikan nilai dengan `--dart-define=SERVER_HOST=...`, `--dart-define=MQTT_USERNAME=...`, dan `--dart-define=MQTT_PASSWORD=...`. File definisi lokal tidak boleh di-commit. Pastikan firmware menggunakan username/password yang sama dengan konfigurasi broker; username dan password MQTT wajib dan diminta lewat chat pribadi, bukan dari repo.
 
 Buat file rahasia lokal dari template dan isi nilai rahasia sendiri. Jangan commit `.env.docker`.
 

@@ -1,8 +1,0 @@
-cd D:\kuliah\PBL2\tandon\mobile\monitoring_tandon
-flutter run -d chrome --dart-define=MQTT_PASSWORD=12345 --dart-define=SERVER_HOST=127.0.0.1
-
-
-// start docker 
-cd D:\kuliah\PBL2\tandon
-docker compose --env-file .env.docker up -d
-docker compose --env-file .env.docker ps

@@ -6,3 +6,4 @@ tandon-*.sql.gz
 backend/storage/logs/*.log
 test.json
 history.csv
+*.txt

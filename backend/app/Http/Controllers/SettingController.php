@@ -51,17 +51,24 @@ class SettingController extends Controller
             }
         }
         $s->update($data);
-        if ($isAdmin && array_intersect(
-            array_keys($data),
-            ['batas_air', 'batas_suhu', 'batas_debit'],
-        ) !== []) {
+        if ($isAdmin) {
             $this->publish($s);
         }
 
         return response()->json($s);
     }
 
-    private function publish(Setting $s): void
+    protected function publish(Setting $s): void
+    {
+        $this->publishMessage(
+            'tandon/config',
+            json_encode($this->configPayload($s)),
+            0,
+            true,
+        );
+    }
+
+    protected function publishMessage(string $topic, string $message, int $qos, bool $retained): void
     {
         try {
             $mqtt = new MqttClient(
@@ -70,14 +77,23 @@ class SettingController extends Controller
                 'laravel-config-' . uniqid()
             );
             $mqtt->connect((new ConnectionSettings)->setUsername(env("MQTT_USERNAME"))->setPassword(env("MQTT_PASSWORD")), true);
-            $mqtt->publish('tandon/config', json_encode([
-                'batas_air'   => $s->batas_air,
-                'batas_suhu'  => $s->batas_suhu,
-                'batas_debit' => $s->batas_debit,
-            ]), 0, true);   // true = retained
+            $mqtt->publish($topic, $message, $qos, $retained);
             $mqtt->disconnect();
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    protected function configPayload(Setting $s): array
+    {
+        return [
+            'batas_air' => (float) $s->batas_air,
+            'batas_suhu' => (float) $s->batas_suhu,
+            'batas_debit' => (float) $s->batas_debit,
+            'capacity_liters' => (float) $s->capacity_liters,
+            'pump_on_level' => (float) $s->pump_on_level,
+            'pump_off_level' => (float) $s->pump_off_level,
+            'automatic_pump' => (bool) $s->automatic_pump,
+        ];
     }
 }

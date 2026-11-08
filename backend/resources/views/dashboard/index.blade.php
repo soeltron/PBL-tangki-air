@@ -241,6 +241,32 @@
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     })[char]);
     const display = (value, suffix = '') => value === null || value === undefined ? '—' : `${escapeHtml(value)}${suffix}`;
+    const formatWibTimestamp = (value, includeYear = true) => {
+        if (!value) return '—';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '—';
+        const formatOptions = {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hourCycle: 'h23',
+        };
+        if (includeYear) formatOptions.year = 'numeric';
+        const parts = new Intl.DateTimeFormat('en-GB', formatOptions).formatToParts(date);
+        const part = (type) => parts.find(({ type: partType }) => partType === type).value;
+
+        if (!includeYear) {
+            return `${part('day')}/${part('month')} ${part('hour')}.${part('minute')}`;
+        }
+
+        return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}.${part('minute')}`;
+    };
+    const parseUtcHour = (value) => {
+        const isoValue = value.replace(' ', 'T');
+        return new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(isoValue) ? isoValue : `${isoValue}Z`);
+    };
     const showMessage = (id, message) => {
         const element = document.getElementById(id);
         element.textContent = message;
@@ -309,15 +335,24 @@
             const metric = document.getElementById('stats-metric').value;
             const query = new URLSearchParams({ device, range });
             const data = await request(`/dashboard/data/stats?${query}`);
-            const labels = data.points.map((point) => new Date(point.hour.replace(' ', 'T')).toLocaleString('id-ID', {
-                month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-            }));
+            const labels = data.points.map((point) => formatWibTimestamp(parseUtcHour(point.hour), false));
             const options = {
                 responsive: true,
                 interaction: { mode: 'index', intersect: false },
                 scales: { x: { ticks: { color: '#94a3b8', maxTicksLimit: 12 }, grid: { color: '#1e293b' } },
-                    y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } } },
-                plugins: { legend: { labels: { color: '#e2e8f0' } } }
+                    y: { ...(metric === 'level' ? { min: 0, max: 100 } : {}),
+                        ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } } },
+                plugins: {
+                    legend: { labels: { color: '#e2e8f0' } },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => {
+                                const point = data.points[items[0]?.dataIndex];
+                                return point ? formatWibTimestamp(parseUtcHour(point.hour)) : '';
+                            },
+                        },
+                    },
+                }
             };
             const datasets = [
                 { key: `avg_${metric}`, label: 'Rata-rata', color: '#22d3ee' },
@@ -325,7 +360,7 @@
                 { key: `max_${metric}`, label: 'Maksimum', color: '#fb7185' },
             ].map(({ key, label, color }) => ({
                 label, data: data.points.map((point) => point[key]), borderColor: color,
-                backgroundColor: color, tension: 0.25, spanGaps: true,
+                backgroundColor: color, tension: 0, spanGaps: true,
             }));
             if (chart) chart.destroy();
             chart = new Chart(document.getElementById('stats-chart'), {
@@ -340,7 +375,7 @@
         try {
             const data = await request(`/dashboard/data/history?${params(pages.history)}`);
             document.getElementById('history-rows').innerHTML = data.data.map((row) => `
-                <tr><td class="p-3">${escapeHtml(row.created_at)}</td><td class="p-3">${escapeHtml(row.device)}</td>
+                <tr><td class="p-3">${formatWibTimestamp(row.created_at)}</td><td class="p-3">${escapeHtml(row.device)}</td>
                 <td class="p-3">${display(row.level, '%')}</td><td class="p-3">${display(row.suhu, '°C')}</td>
                 <td class="p-3">${display(row.debit)}</td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada data.</td></tr>';
             document.getElementById('history-page').textContent = `Halaman ${data.current_page} dari ${data.last_page}`;
@@ -353,7 +388,7 @@
         try {
             const data = await request(`/dashboard/data/fillings?${params(pages.fillings)}`);
             document.getElementById('fillings-rows').innerHTML = data.data.map((row) => `
-                <tr><td class="p-3">${escapeHtml(row.started_at)}</td><td class="p-3">${escapeHtml(row.ended_at)}</td>
+                <tr><td class="p-3">${formatWibTimestamp(row.started_at)}</td><td class="p-3">${formatWibTimestamp(row.ended_at)}</td>
                 <td class="p-3">${display(row.start_level, '%')}</td><td class="p-3">${display(row.end_level, '%')}</td>
                 <td class="p-3">${display(row.start_debit)}</td><td class="p-3">${display(row.end_debit)}</td></tr>`).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-400">Belum ada riwayat pengisian.</td></tr>';
             document.getElementById('fillings-page').textContent = `Halaman ${data.current_page} dari ${data.last_page}`;
@@ -380,7 +415,7 @@
             usersById = Object.fromEntries(data.data.map((user) => [user.id, user]));
             document.getElementById('users-rows').innerHTML = data.data.map((user) => `
                 <tr><td class="p-3">${escapeHtml(user.name)}</td><td class="p-3">${escapeHtml(user.email)}</td>
-                <td class="p-3">${escapeHtml(user.role)}</td><td class="p-3">${escapeHtml(user.last_login_at)}</td>
+                <td class="p-3">${escapeHtml(user.role)}</td><td class="p-3">${formatWibTimestamp(user.last_login_at)}</td>
                 <td class="flex gap-2 p-3">
                     <button data-edit-user="${user.id}" class="text-cyan-300 hover:underline">Ubah</button>
                     ${user.id === @json(auth()->id()) ? '' : `<button data-delete-user="${user.id}" class="text-rose-300 hover:underline">Hapus</button>`}

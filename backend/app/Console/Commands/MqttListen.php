@@ -34,13 +34,38 @@ class MqttListen extends Command
 
     public function processMessage(string $message): ?SensorData
     {
-        $data = json_decode($message, true);
-        if (!is_array($data) || !isset($data['device'])) {
+        $data = json_decode($message);
+        if (
+            !is_object($data)
+            || !isset($data->device)
+            || !in_array($data->device, ['d1', 'd2'], true)
+        ) {
+            return null;
+        }
+
+        if ($data->device === 'd1') {
+            if (
+                !isset($data->level)
+                || !is_numeric($data->level)
+                || $data->level < 0
+                || $data->level > 100
+                || !isset($data->suhu)
+                || !is_numeric($data->suhu)
+                || !property_exists($data, 'pompa')
+                || !is_bool($data->pompa)
+            ) {
+                return null;
+            }
+        } elseif (
+            !isset($data->debit)
+            || !is_numeric($data->debit)
+            || $data->debit < 0
+        ) {
             return null;
         }
 
         $previousPump = null;
-        if ($data['device'] === 'd1') {
+        if ($data->device === 'd1') {
             $previousPump = SensorData::query()
                 ->where('device', 'd1')
                 ->latest('id')
@@ -49,11 +74,11 @@ class MqttListen extends Command
         }
 
         $sensorData = SensorData::create([
-            'device' => $data['device'],
-            'level' => $data['level'] ?? null,
-            'suhu' => $data['suhu'] ?? null,
-            'debit' => $data['debit'] ?? null,
-            'pompa' => $data['pompa'] ?? null,
+            'device' => $data->device,
+            'level' => $data->level ?? null,
+            'suhu' => $data->suhu ?? null,
+            'debit' => $data->debit ?? null,
+            'pompa' => $data->pompa ?? null,
         ]);
 
         app(WaterFillingTracker::class)->record($sensorData, $previousPump);
